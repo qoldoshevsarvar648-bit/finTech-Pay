@@ -1,0 +1,13 @@
+{
+  "name": "fintech-pay-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fintech Pay Online Banking Application",
+  "main": "index.html",
+  "scripts": {
+    "start": "node -e \"console.log('Deployable on Vercel or GitHub Pages')\""
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}

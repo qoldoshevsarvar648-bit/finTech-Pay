@@ -1,0 +1,11 @@
+{
+  "note": "Ushbu fayl namuna hisoblanadi. O'zingizning SMTP ma'lumotlaringizni kiriting.",
+  "smtp": {
+    "enabled": true,
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "user": "sizning_pochtangiz@gmail.com",
+    "pass": "sizning_google_app_parolingiz"
+  },
+  "webhookUrl": ""
+}

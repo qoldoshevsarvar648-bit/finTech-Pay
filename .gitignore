@@ -1,0 +1,19 @@
+# Dependency directories
+node_modules/
+
+# Logs
+email_log.txt
+*.log
+
+# Sensitive credentials & local secrets
+email-config.json
+.env
+.env.local
+.env.*.local
+
+# Vercel
+.vercel
+
+# OS metadata
+Thumbs.db
+.DS_Store

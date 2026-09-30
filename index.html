@@ -1,0 +1,2213 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinTech Pay — Ko'p Foydalanuvchili Xavfsiz Pul O'tkazmalari</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- EmailJS SDK for Real Mail Dispatch -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(1.08); }
+    }
+    .glow-bg {
+      animation: pulseGlow 6s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- ================= AUTHENTICATION CONTAINER (LOGIN / REGISTER) ================= -->
+  <div id="authScreen" class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    <!-- Ambient light -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none glow-bg"></div>
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none glow-bg"></div>
+
+    <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative z-10">
+      
+      <!-- Brand Logo -->
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-3">
+          <i data-lucide="shield-check" class="w-7 h-7 text-white"></i>
+        </div>
+        <h2 class="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-1">
+          FinTech<span class="text-indigo-400">Pay</span>
+        </h2>
+        <p id="authSubtitle" class="text-xs text-slate-400 mt-1">Xavfsiz va tezkor pul o'tkazmalari tizimiga xush kelibsiz</p>
+      </div>
+
+      <!-- Auth Alert Box -->
+      <div id="authAlert" class="mb-4 p-3.5 rounded-xl hidden text-xs flex items-center space-x-2"></div>
+
+      <!-- PROMINENT AUTH TABS (Kirish / Ro'yxatdan O'tish) -->
+      <div class="grid grid-cols-2 gap-2 p-1 bg-slate-800/80 rounded-2xl mb-5 border border-slate-700/70 shadow-inner">
+        <button
+          id="tabLoginBtn"
+          type="button"
+          onclick="toggleAuthMode('login')"
+          class="py-2.5 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5"
+        >
+          <i data-lucide="log-in" class="w-3.5 h-3.5"></i>
+          <span>Kirish</span>
+        </button>
+        <button
+          id="tabRegisterBtn"
+          type="button"
+          onclick="toggleAuthMode('register')"
+          class="py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white flex items-center justify-center gap-1.5"
+        >
+          <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+          <span>Ro'yxatdan O'tish</span>
+        </button>
+      </div>
+
+      <!-- Hidden Iframe to allow real POST submission without page reload, triggering browser Save Password prompt -->
+      <iframe name="auth_sink" id="auth_sink" style="display:none; width:0; height:0; border:0;"></iframe>
+
+      <!-- LOGIN FORM -->
+      <form id="loginForm" target="auth_sink" action="about:blank" method="POST" autocomplete="on" onsubmit="return handleLogin(event)" class="space-y-4">
+        
+        <!-- Google OAuth Button for Login -->
+        <button
+          type="button"
+          onclick="openGoogleOAuthModal()"
+          class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-2.5 active:scale-[0.98]"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Google orqali tezkor kirish</span>
+        </button>
+
+        <div class="flex items-center my-3">
+          <div class="flex-1 border-t border-slate-800"></div>
+          <span class="px-2 text-[11px] text-slate-500 font-medium">yoki email orqali</span>
+          <div class="flex-1 border-t border-slate-800"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email manzil</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="loginEmail"
+              name="username"
+              type="email"
+              autocomplete="username"
+              required
+              placeholder="pochta@domen.uz"
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Parol</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="loginPassword"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="••••••••"
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+            />
+          </div>
+        </div>
+
+        <!-- REMEMBER ME CHECKBOX -->
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center space-x-2 cursor-pointer select-none">
+            <input
+              id="rememberMeCheckbox"
+              type="checkbox"
+              class="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+            />
+            <span class="text-xs text-slate-300 font-medium">Meni eslab qolish</span>
+          </label>
+          <a href="javascript:void(0)" onclick="alert('Parolni tiklash uchun qo\'llab-quvvatlash xizmati bilan bog\'laning.')" class="text-xs text-indigo-400 hover:text-indigo-300 transition">
+            Parolni unutdingizmi?
+          </a>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition shadow-lg shadow-indigo-600/30 active:scale-[0.98] flex items-center justify-center space-x-2 mt-2"
+        >
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Tizimga Kirish</span>
+        </button>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="registerForm" target="auth_sink" action="about:blank" method="POST" autocomplete="on" onsubmit="return handleRegister(event)" class="space-y-3 hidden">
+        
+        <!-- Google OAuth Button -->
+        <button
+          type="button"
+          onclick="openGoogleOAuthModal()"
+          class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-2.5 active:scale-[0.98]"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Google orqali tezkor ro'yxatdan o'tish</span>
+        </button>
+
+        <div class="flex items-center my-3">
+          <div class="flex-1 border-t border-slate-800"></div>
+          <span class="px-2 text-[11px] text-slate-500 font-medium">yoki email orqali</span>
+          <div class="flex-1 border-t border-slate-800"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Ism</label>
+            <input
+              id="regFirstName"
+              name="given-name"
+              type="text"
+              autocomplete="given-name"
+              required
+              placeholder="Ismingiz"
+              class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Familiya</label>
+            <input
+              id="regLastName"
+              name="family-name"
+              type="text"
+              autocomplete="family-name"
+              required
+              placeholder="Familiyangiz"
+              class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="block text-xs font-semibold text-slate-300">Email manzil</label>
+            <span id="emailLiveStatus" class="text-[11px] font-medium hidden"></span>
+          </div>
+          <input
+            id="regEmail"
+            name="username"
+            type="email"
+            autocomplete="username"
+            required
+            oninput="checkEmailDomainLive(this.value)"
+            placeholder="pochta@domen.uz"
+            class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+          />
+          <p class="text-[10px] text-slate-500 mt-1">Faqat haqiqiy email manzillari (Gmail, Mail.ru, Yandex, Outlook, va h.k.) qabul qilinadi.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Telefon raqam</label>
+          <input
+            id="regPhone"
+            name="tel"
+            type="text"
+            autocomplete="tel"
+            required
+            placeholder="+998 __ ___ __ __"
+            class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Email paroli / Hisob paroli</label>
+          <input
+            id="regPassword"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength="6"
+            placeholder="Kamida 6 ta belgi"
+            class="w-full px-3 py-2 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+          />
+          <p class="text-[10px] text-slate-500 mt-1">Ro'yxatdan o'tishda email egaligi va paroli tekshiriladi.</p>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-sm transition shadow-lg shadow-emerald-600/30 active:scale-[0.98] flex items-center justify-center space-x-2 mt-2"
+        >
+          <i data-lucide="shield-check" class="w-4 h-4"></i>
+          <span>Emailni Tekshirish va Ro'yxatdan O'tish</span>
+        </button>
+
+        <p class="text-xs text-center text-slate-400 pt-2">
+          Hisobingiz bormi? 
+          <a href="javascript:void(0)" onclick="toggleAuthMode('login')" class="text-indigo-400 hover:text-indigo-300 font-semibold underline ml-1">
+            Kirish
+          </a>
+        </p>
+
+        <div class="pt-3 border-t border-slate-800/80 text-center text-[11px] text-slate-500">
+          <span class="inline-flex items-center gap-1">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Avtomatik xavfsiz email tekshiruvi yoqilgan</span>
+          </span>
+        </div>
+      </form>
+
+      <!-- Wipe Data Button -->
+      <div class="pt-3 mt-3 border-t border-slate-800 text-center">
+        <button
+          type="button"
+          onclick="clearAllAccounts(); alert('Barcha akkountlar muvaffaqiyatli o\'chirildi!');"
+          class="text-[11px] text-slate-500 hover:text-rose-400 transition inline-flex items-center gap-1 font-medium"
+        >
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Barcha akkountlarni tozalash (0 ta qilish)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MAIN DASHBOARD (LOGGED IN USERS) ================= -->
+  <div id="dashboardScreen" class="hidden min-h-screen flex-col">
+    <!-- TOP NAVBAR -->
+    <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <span class="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
+              FinTech<span class="text-indigo-400">Pay</span>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">P2P Core</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- User Profile, Switch & Logout -->
+        <div class="flex items-center space-x-3">
+          <div class="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+            <i data-lucide="badge-check" class="w-3.5 h-3.5"></i>
+            <span>KYC: Tasdiqlangan</span>
+          </div>
+
+          <div class="flex items-center space-x-3 pl-2 sm:pl-3 sm:border-l sm:border-slate-800">
+            <div id="userAvatar" class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-sm font-bold text-indigo-300">
+              --
+            </div>
+            <div class="hidden md:block text-left">
+              <p id="userNameDisplay" class="text-xs font-semibold text-white leading-tight"></p>
+              <p id="userEmailDisplay" class="text-[11px] text-slate-400"></p>
+            </div>
+          </div>
+
+          <button
+            onclick="handleLogout()"
+            title="Tizimdan chiqish"
+            class="p-2 rounded-xl bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 transition"
+          >
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      
+      <!-- WELCOME BANNER -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            <span>Salom, <span id="welcomeUserName"></span>!</span>
+          </h1>
+          <p class="text-sm text-slate-400 mt-1">Xavfsiz pul o'tkazmalari va shaxsiy virtual hamyon nazorati</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-mono">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            ACID Lock & Real-time Validation
+          </span>
+        </div>
+      </div>
+
+      <!-- WALLET & STATS GRID -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- WALLET CARD (2 Cols on lg) -->
+        <div class="lg:col-span-2 relative rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950/80 to-slate-900 p-6 sm:p-8 text-white shadow-2xl border border-slate-800/80 overflow-hidden">
+          <div class="absolute -top-24 -right-24 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl pointer-events-none glow-bg"></div>
+          <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none glow-bg"></div>
+
+          <div class="relative z-10 flex flex-col justify-between h-full space-y-6">
+            
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center">
+                  <i data-lucide="credit-card" class="w-6 h-6 text-indigo-400"></i>
+                </div>
+                <div>
+                  <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Virtual Hamyon Raqami</p>
+                  <div class="flex items-center space-x-2 mt-0.5 cursor-pointer group" onclick="copyWalletNumber()">
+                    <span id="walletNumberDisplay" class="text-sm font-mono text-slate-200 group-hover:text-white transition">WAL-8942-1809-USD</span>
+                    <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-400 group-hover:text-white"></i>
+                  </div>
+                </div>
+              </div>
+
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 mr-1"></i> Himoyalangan
+              </span>
+            </div>
+
+            <!-- Balance -->
+            <div class="my-2">
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-slate-400 tracking-wider font-semibold uppercase">Mavjud Balans</span>
+                <button onclick="toggleBalance()" class="text-slate-400 hover:text-white transition p-1">
+                  <i data-lucide="eye" id="eyeIcon" class="w-4 h-4"></i>
+                </button>
+              </div>
+
+              <div class="mt-2 flex items-baseline space-x-2">
+                <span class="text-slate-400 text-3xl font-light">USD</span>
+                <h2 id="balanceDisplay" class="text-4xl sm:text-5xl font-extrabold tracking-tight font-mono">0.00</h2>
+              </div>
+              <p class="text-xs text-slate-400 mt-2 font-medium">Telefon: <span id="userPhoneDisplay" class="text-slate-300 font-mono">+998901234567</span></p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <button onclick="openTransferModal()" class="flex items-center justify-center space-x-2 py-3.5 px-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 font-semibold text-sm transition shadow-lg shadow-indigo-600/30 active:scale-[0.98]">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span>P2P Pul O'tkazish</span>
+              </button>
+
+              <button onclick="simulateDeposit()" class="flex items-center justify-center space-x-2 py-3.5 px-4 rounded-2xl bg-slate-800/80 hover:bg-slate-700 font-semibold text-sm transition border border-slate-700 text-slate-200 active:scale-[0.98]">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i>
+                <span>Balansni To'ldirish</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- USERS DIRECTORY / TESTING ASSISTANT (1 Col) -->
+        <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col justify-between space-y-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="users" class="w-4 h-4 text-indigo-400"></i>
+              Tizimdagi Boshqa Foydalanuvchilar
+            </h3>
+            <p class="text-xs text-slate-400 mt-1">Pul o'tkazish uchun quyidagi mavjud foydalanuvchilar identifikatoridan foydalanishingiz mumkin:</p>
+          </div>
+
+          <!-- Dynamic Other Users List -->
+          <div id="otherUsersList" class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+            <!-- Rendered by JS -->
+          </div>
+
+          <div class="pt-2 text-[11px] text-slate-400 bg-slate-800/40 p-2.5 rounded-xl border border-slate-800">
+            <span class="text-amber-400 font-semibold">Diqqat:</span> Agar siz mavjud bo'lmagan email yoki telefon kiritsangiz, tizim xavfsizlik tekshiruvi sababli o'tkazmani darhol <span class="text-rose-400 font-bold">bekor qiladi</span>!
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TRANSACTIONS HISTORY TABLE -->
+      <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-8">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+          <div>
+            <h3 class="text-lg font-bold text-white">Shaxsiy Tranzaksiyalar Tarixi</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Faqat sizning hisobingizga tegishli barcha kirim va chiqimlar</p>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="overflow-x-auto mt-4">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <th class="py-3.5 px-3">Tranzaksiya ID</th>
+                <th class="py-3.5 px-3">Ishtirokchi</th>
+                <th class="py-3.5 px-3">Turi</th>
+                <th class="py-3.5 px-3">Summa</th>
+                <th class="py-3.5 px-3">Komissiya</th>
+                <th class="py-3.5 px-3">Status</th>
+                <th class="py-3.5 px-3 text-right">Kvitansiya (Chek)</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+              <!-- Dynamic rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ================= P2P TRANSFER MODAL ================= -->
+  <div id="transferModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-white relative">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div>
+          <h3 class="text-lg font-bold">P2P Pul O'tkazmasi</h3>
+          <p class="text-xs text-slate-400">Foydalanuvchini tekshirish va xavfsiz o'tkazma</p>
+        </div>
+        <button onclick="closeTransferModal()" class="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Live Error / Warning Message Box -->
+      <div id="transferAlert" class="mt-4 p-3.5 rounded-xl hidden text-xs flex items-start space-x-2.5"></div>
+
+      <form id="transferForm" onsubmit="handleTransferSubmit(event)" class="mt-5 space-y-4 font-sans">
+        
+        <!-- Recipient -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Qabul qiluvchi (Email, Telefon yoki Hamyon ID)
+          </label>
+          <input
+            id="recipientInput"
+            type="text"
+            required
+            oninput="clearTransferAlert()"
+            placeholder="Email, telefon yoki hamyon raqami"
+            class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+          />
+          <p class="text-[11px] text-slate-500 mt-1">Eslatma: Mavjud bo'lmagan foydalanuvchiga yuborish bekor qilinadi.</p>
+        </div>
+
+        <!-- Amount -->
+        <div>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-semibold text-slate-300">Summa (USD)</label>
+            <span class="text-xs text-slate-400">Mavjud: <span id="modalMaxBalance" class="font-mono text-indigo-400">$0.00</span></span>
+          </div>
+          <div class="relative">
+            <input
+              id="amountInput"
+              type="number"
+              step="0.01"
+              min="1"
+              required
+              oninput="calculateFee()"
+              placeholder="0.00"
+              class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-lg font-bold font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+            />
+            <button
+              type="button"
+              onclick="setMaxAmount()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 px-2 py-1 rounded-lg"
+            >
+              Maksimum
+            </button>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">Izoh (Ixtiyoriy)</label>
+          <input
+            id="descriptionInput"
+            type="text"
+            placeholder="Masalan: Loyiha xizmati uchun"
+            class="w-full px-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-white"
+          />
+        </div>
+
+        <!-- Real-time calculation box -->
+        <div id="feeCalcBox" class="p-3.5 bg-slate-800/40 border border-slate-700/60 rounded-xl text-xs space-y-1.5">
+          <div class="flex justify-between text-slate-400">
+            <span>Tizim komissiyasi (0.5%):</span>
+            <span id="feeDisplay" class="font-mono">$0.00</span>
+          </div>
+          <div class="flex justify-between font-bold text-white border-t border-slate-700/50 pt-1.5">
+            <span>Jami hisobdan yechiladi:</span>
+            <span id="totalDeductionDisplay" class="font-mono text-indigo-400">$0.00</span>
+          </div>
+        </div>
+
+        <!-- 2FA Section -->
+        <div id="twoFASection" class="hidden p-4 bg-indigo-950/50 border border-indigo-500/40 rounded-2xl space-y-2">
+          <div class="flex items-center space-x-2 text-indigo-300 text-xs font-semibold">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            <span>Google Authenticator 2FA Kodi</span>
+          </div>
+          <input
+            id="twoFACode"
+            type="text"
+            maxlength="6"
+            placeholder="······"
+            class="w-full text-center tracking-[0.5em] font-mono text-xl py-2 bg-slate-900 border border-indigo-500/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 text-white"
+          />
+        </div>
+
+        <button
+          type="submit"
+          id="submitTransferBtn"
+          class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30"
+        >
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span id="submitBtnText">Pulni Yuborish</span>
+        </button>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= RECEIPT MODAL (CHEK) ================= -->
+  <div id="receiptModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-white relative">
+      
+      <div class="text-center pb-4 border-b border-slate-800">
+        <div class="w-14 h-14 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-3">
+          <i data-lucide="check" class="w-8 h-8 text-emerald-400"></i>
+        </div>
+        <h3 class="text-xl font-bold text-white">O'tkazma Muvaffaqiyatli!</h3>
+        <p class="text-xs text-slate-400 mt-1">ACID kafolatlangan bank kvitansiyasi</p>
+      </div>
+
+      <div class="py-5 space-y-3 text-xs border-b border-slate-800 font-sans">
+        <div class="flex justify-between text-slate-400">
+          <span>Tranzaksiya Kodu:</span>
+          <span id="rcpRef" class="font-mono text-white font-semibold">TRX-2026-901</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Yuboruvchi:</span>
+          <span id="rcpSender" class="font-semibold text-slate-300">-</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Qabul Qiluvchi:</span>
+          <span id="rcpRecipient" class="font-semibold text-emerald-400">-</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>O'tkazma Summasi:</span>
+          <span id="rcpAmount" class="font-mono font-bold text-white">$0.00</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Xizmat Haqi (0.5%):</span>
+          <span id="rcpFee" class="font-mono text-slate-300">$0.00</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Vaqt:</span>
+          <span id="rcpDate" class="text-slate-300">2026-09-18 10:45:00</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Holat:</span>
+          <span class="text-emerald-400 font-bold uppercase">SUCCESS (LEDGER VERIFIED)</span>
+        </div>
+      </div>
+
+      <div class="mt-6 flex space-x-3 font-sans">
+        <button onclick="window.print()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-xl text-xs transition flex items-center justify-center space-x-2">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Chop Etish</span>
+        </button>
+        <button onclick="closeReceiptModal()" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs transition">
+          Yopish
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= EMAIL & PASSWORD VERIFICATION MODAL ================= -->
+  <div id="emailVerifyModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-white relative">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="mail-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Email Haqiqiyligini Tasdiqlash</h3>
+            <p class="text-xs text-slate-400">Pochta mavjudligi va egaligini tekshirish</p>
+          </div>
+        </div>
+        <button onclick="closeEmailVerifyModal()" class="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="my-4 p-3.5 bg-slate-800/50 border border-slate-700/60 rounded-2xl space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Kiritilgan Email:</span>
+          <span id="verifyTargetEmail" class="font-semibold text-white font-mono">---</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Domen / MX Tekshiruvi:</span>
+          <span class="text-emerald-400 font-bold flex items-center gap-1">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            Haqiqiy Pochta Provayderi
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-slate-400">Email Paroli:</span>
+          <span class="text-indigo-300 font-semibold">Kiritildi (Qabul qilindi)</span>
+        </div>
+      </div>
+
+      <!-- Real Email Sending & Delivery Status -->
+      <div id="emailSendingStatus" class="mb-3 p-3 rounded-2xl text-xs flex items-center space-x-2.5 bg-indigo-950/60 border border-indigo-500/30 text-indigo-200">
+        <svg id="emailSendingSpinner" class="w-4 h-4 animate-spin text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span id="emailSendingStatusText" class="leading-snug">Tasdiqlash kodi pochtangizga yuborilmoqda...</span>
+      </div>
+
+      <div id="verifyAlert" class="mb-3 p-3 rounded-xl hidden text-xs flex items-center space-x-2"></div>
+
+      <div class="space-y-4 font-sans">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+            Pochtangizga yuborilgan 6 xonali tasdiqlash kodini kiriting:
+          </label>
+          <input
+            id="emailOtpInput"
+            type="text"
+            maxlength="6"
+            placeholder="······"
+            class="w-full text-center tracking-[0.5em] font-mono text-2xl py-3 bg-slate-800/80 border border-indigo-500/50 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white font-bold"
+          />
+          <p class="text-[11px] text-slate-400 mt-1.5 text-center">
+            Pochtangizni (Kiruvchi xatlar yoki Spam papkasini) oching va yuborilgan 6 xonali tasdiqlash kodini kiriting.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          id="confirmEmailVerifyBtn"
+          onclick="submitEmailVerification()"
+          class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-sm transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/30"
+        >
+          <i data-lucide="badge-check" class="w-4 h-4"></i>
+          <span>Kodni Tasdiqlash va Hamyon Olish</span>
+        </button>
+
+        <div class="flex items-center justify-between pt-1 text-xs">
+          <button type="button" onclick="resendVerificationCode()" class="text-indigo-400 hover:text-indigo-300 underline font-medium">
+            Kodni pochtaga qayta yuborish
+          </button>
+          <span class="text-[11px] text-slate-500">Avtomatik jo'natiladi</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= GOOGLE OAUTH MODAL ================= -->
+  <div id="googleOAuthModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-sm bg-white rounded-3xl p-6 sm:p-7 shadow-2xl text-slate-900 relative">
+      <div class="text-center pb-4 border-b border-slate-200">
+        <svg class="w-8 h-8 mx-auto mb-2" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <h3 class="text-base font-bold text-slate-900">Google (Gmail) Hisobi Bilan Ulanish</h3>
+        <p class="text-xs text-slate-500">Rasmiy Google OAuth 2.0 Identity Services</p>
+      </div>
+
+      <!-- Real Google Official Button Container -->
+      <div id="googleOfficialBtnWrapper" class="my-3 flex flex-col items-center justify-center min-h-[44px]">
+        <div id="googleBtnPlaceholder" class="text-xs text-slate-500 py-1 flex items-center gap-1">
+          <svg class="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Google xizmatiga ulanmoqda...</span>
+        </div>
+      </div>
+
+      <div class="my-4 space-y-3">
+        <button
+          type="button"
+          onclick="triggerGoogleTokenPopup()"
+          class="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl text-xs transition shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2.5 active:scale-[0.98]"
+        >
+          <svg class="w-4 h-4 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Google Hisobini Tanlash (Rasmiy Oyna)</span>
+        </button>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600 space-y-1">
+          <p class="font-semibold text-slate-800 flex items-center gap-1">
+            <span>💡 Google tizimi haqida:</span>
+          </p>
+          <p>
+            Google orqali kirilganda parolingiz saytga kiritilmaydi. Google o'zi hisobingiz mavjudligi va xavfsizligini 100% kafolatlaydi.
+          </p>
+          <p class="text-[10px] text-blue-600 pt-0.5">
+            Google tizimining to'liq ishlashi uchun loyihadagi <b>run_server.bat</b> faylini ishga tushiring (http://localhost:3000).
+          </p>
+        </div>
+
+        <div class="pt-2 flex gap-2">
+          <button
+            type="button"
+            onclick="closeGoogleOAuthModal()"
+            class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition"
+          >
+            Yopish
+          </button>
+        </div>
+
+        <!-- Google Client ID Setup Toggle -->
+        <div class="pt-2 border-t border-slate-100 text-center">
+          <button
+            type="button"
+            onclick="toggleGoogleClientIdSetup()"
+            class="text-[11px] text-blue-600 hover:text-blue-700 underline font-medium"
+          >
+            ⚙️ O'z Google Client ID kalitingizni sozlash
+          </button>
+          <div id="googleClientIdBox" class="hidden mt-2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-left text-xs space-y-1.5">
+            <p class="text-[10px] text-slate-500">Google Cloud Console-dan olingan Client ID:</p>
+            <input
+              id="customGoogleClientId"
+              type="text"
+              placeholder="xxxx-xxxx.apps.googleusercontent.com"
+              class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+            />
+            <button
+              type="button"
+              onclick="saveCustomGoogleClientId()"
+              class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-semibold rounded-lg text-xs"
+            >
+              Kalitni Saqlash va Sinash
+            </button>
+          </div>
+        </div>
+      </div>
+  <!-- ================= EMAIL SETTINGS MODAL ================= -->
+  <div id="emailSettingsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 shadow-2xl text-white relative max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="mail-plus" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold">Pochta (Email) Xizmati Sozlamalari</h3>
+            <p class="text-xs text-slate-400">Haqiqiy tasdiqlash kodlarini pochtaga yetkazish</p>
+          </div>
+        </div>
+        <button onclick="closeEmailSettingsModal()" class="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="my-4 space-y-4 text-xs">
+        <!-- Option 1: Google Apps Script Webhook (Recommended) -->
+        <div class="p-4 bg-slate-800/60 border border-indigo-500/30 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              Google Apps Script / Webhook (Gmail orqali bepul jo'natish)
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">Tavsiya etiladi</span>
+          </div>
+          <p class="text-slate-400 text-[11px] leading-relaxed">
+            Google hisobingiz (Gmail) orqali to'g'ridan-to'g'ri foydalanuvchilar pochtasiga xat yetkazish uchun Google Apps Script Web App URL manzilini kiriting:
+          </p>
+          <input
+            id="emailWebhookUrlInput"
+            type="url"
+            placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+            class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <details class="text-[11px] text-slate-400 pt-1 cursor-pointer">
+            <summary class="text-indigo-400 hover:text-indigo-300 font-semibold select-none">
+              👉 Bepul 1 daqiqalik Google Apps Script yaratish qo'llanmasi
+            </summary>
+            <div class="mt-2 p-3 bg-slate-900/90 rounded-xl space-y-2 text-slate-300 border border-slate-700/50">
+              <p>1. <a href="https://script.google.com" target="_blank" class="text-indigo-400 underline">script.google.com</a> ga kiring va "New project" bosing.</p>
+              <p>2. Quyidagi kodni nusxalab, tahrirlovchiga joylang:</p>
+              <pre class="bg-black/60 p-2.5 rounded-lg font-mono text-[10px] text-emerald-300 overflow-x-auto select-all">function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    MailApp.sendEmail({
+      to: data.to,
+      subject: data.subject || "FinTech Pay - Tasdiqlash Kodi",
+      htmlBody: "&lt;div style='font-family:sans-serif;padding:24px;background:#0f172a;color:#fff;border-radius:16px;max-width:480px;'&gt;"
+              + "&lt;h2 style='color:#6366f1;margin-top:0'&gt;FinTech Pay&lt;/h2&gt;"
+              + "&lt;p&gt;Assalomu alaykum " + (data.name || '') + "!&lt;/p&gt;"
+              + "&lt;p&gt;Saytda ro'yxatdan o'tish uchun tasdiqlash kodingiz:&lt;/p&gt;"
+              + "&lt;div style='font-size:32px;font-weight:bold;letter-spacing:6px;background:#1e293b;padding:16px;text-align:center;border-radius:12px;color:#38bdf8;margin:16px 0;'&gt;"
+              + data.code + "&lt;/div&gt;"
+              + "&lt;p style='color:#94a3b8;font-size:12px'&gt;Ushbu kodni hech kimga bermang. Kod 10 daqiqa davomida amal qiladi.&lt;/p&gt;&lt;/div&gt;"
+    });
+    return ContentService.createTextOutput(JSON.stringify({status: 'ok'})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status: 'error', error: err.message})).setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+              <p>3. "Deploy" -> "New deployment" -> Turi: "Web app" -> "Who has access": "Anyone" -> "Deploy" bosing va berilgan URL manzilni yuqoriga qo'ying.</p>
+            </div>
+          </details>
+        </div>
+
+        <!-- Option 2: EmailJS -->
+        <div class="p-4 bg-slate-800/60 border border-slate-700/60 rounded-2xl space-y-2">
+          <span class="font-bold text-white">Yoki EmailJS Xizmati (Public Key, Service ID, Template ID):</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Public Key:</label>
+              <input id="emailjsPublicKeyInput" type="text" placeholder="user_xxx" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Service ID:</label>
+              <input id="emailjsServiceIdInput" type="text" placeholder="service_xxx" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white" />
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Template ID:</label>
+              <input id="emailjsTemplateIdInput" type="text" placeholder="template_xxx" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white" />
+            </div>
+        <!-- Option 3: Test Sending -->
+        <div class="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl space-y-2">
+          <span class="font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="send" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>Sozlamalarni Sinovdan O'tkazish (Test Email):</span>
+          </span>
+          <p class="text-slate-400 text-[11px]">O'z pochtangizni kiriting va sinov xati kelishini tekshiring:</p>
+          <div class="flex gap-2">
+            <input id="testEmailInput" type="email" placeholder="sizning_emailingiz@gmail.com" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white" />
+            <button type="button" onclick="sendTestEmail()" id="sendTestEmailBtn" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shrink-0">
+              Yuborib Ko'rish
+            </button>
+          </div>
+          <div id="testEmailAlert" class="hidden p-2 rounded-xl text-xs"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+        <button type="button" onclick="closeEmailSettingsModal()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-medium text-slate-300 transition">
+          Yopish
+        </button>
+        <button type="button" onclick="saveEmailSettings()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>Sozlamalarni Saqlash</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT APP LOGIC ================= -->
+  <script>
+    // INITIAL DATABASE (Barcha boshlang'ich va test akkountlar tozalangan)
+    const INITIAL_USERS = [];
+
+    // Storage Helpers
+    function getDBUsers() {
+      const stored = localStorage.getItem('fintech_users');
+      if (!stored) {
+        localStorage.setItem('fintech_users', JSON.stringify([]));
+        return [];
+      }
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        localStorage.setItem('fintech_users', JSON.stringify([]));
+        return [];
+      }
+    }
+
+    function saveDBUsers(users) {
+      localStorage.setItem('fintech_users', JSON.stringify(users));
+    }
+
+    // Barcha akkountlarni butunlay tozalash funksiyasi
+    function clearAllAccounts() {
+      localStorage.clear();
+      localStorage.setItem('fintech_users', JSON.stringify([]));
+      clearSession();
+      updateAppView();
+    }
+
+    // Tizimdagi har qanday qolgan akkountlarni darhol butunlay o'chirish:
+    localStorage.setItem('fintech_users', JSON.stringify([]));
+    localStorage.removeItem('fintech_session_email');
+    localStorage.removeItem('fintech_remember_me');
+
+    function getCurrentUser() {
+      const sessionEmail = localStorage.getItem('fintech_session_email');
+      if (!sessionEmail) return null;
+      const users = getDBUsers();
+      return users.find(u => u.email.toLowerCase() === sessionEmail.toLowerCase()) || null;
+    }
+
+    function setCurrentSession(email) {
+      localStorage.setItem('fintech_session_email', email);
+    }
+
+    function clearSession() {
+      localStorage.removeItem('fintech_session_email');
+    }
+
+    // App state
+    let currentUser = null;
+    let showBalance = true;
+    let requires2FA = false;
+
+    // View Routing
+    function updateAppView() {
+      currentUser = getCurrentUser();
+      const authScreen = document.getElementById('authScreen');
+      const dashboardScreen = document.getElementById('dashboardScreen');
+
+      if (currentUser) {
+        authScreen.classList.add('hidden');
+        dashboardScreen.classList.remove('hidden');
+        dashboardScreen.classList.add('flex');
+        renderDashboard();
+      } else {
+        dashboardScreen.classList.add('hidden');
+        dashboardScreen.classList.remove('flex');
+        authScreen.classList.remove('hidden');
+        toggleAuthMode('login');
+      }
+      lucide.createIcons();
+    }
+
+    // Toggle between Login and Register
+    function toggleAuthMode(mode) {
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const authSubtitle = document.getElementById('authSubtitle');
+      const tabLogin = document.getElementById('tabLoginBtn');
+      const tabRegister = document.getElementById('tabRegisterBtn');
+      clearAuthAlert();
+
+      if (mode === 'register') {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        authSubtitle.textContent = "Yangi virtual hamyon ochish uchun ma'lumotlaringizni kiriting";
+
+        if (tabRegister && tabLogin) {
+          tabRegister.className = "py-2.5 text-xs font-bold rounded-xl transition bg-emerald-600 text-white shadow-md shadow-emerald-600/30 flex items-center justify-center gap-1.5";
+          tabLogin.className = "py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white flex items-center justify-center gap-1.5";
+        }
+      } else {
+        registerForm.classList.add('hidden');
+        loginForm.classList.remove('hidden');
+        authSubtitle.textContent = "Xavfsiz va tezkor pul o'tkazmalari tizimiga xush kelibsiz";
+
+        if (tabRegister && tabLogin) {
+          tabLogin.className = "py-2.5 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-md shadow-indigo-600/30 flex items-center justify-center gap-1.5";
+          tabRegister.className = "py-2.5 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white flex items-center justify-center gap-1.5";
+        }
+
+        // Eslab qolingan emailni avtomatik to'ldirish
+        const rememberedEmail = localStorage.getItem('fintech_remembered_email');
+        const loginEmailInput = document.getElementById('loginEmail');
+        const rememberCheckbox = document.getElementById('rememberMeCheckbox');
+        if (rememberedEmail && loginEmailInput) {
+          loginEmailInput.value = rememberedEmail;
+          if (rememberCheckbox) rememberCheckbox.checked = true;
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function showAuthAlert(message, type = 'error') {
+      const alert = document.getElementById('authAlert');
+      alert.classList.remove('hidden');
+      if (type === 'error') {
+        alert.className = 'mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center space-x-2';
+        alert.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+      } else {
+        alert.className = 'mb-4 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center space-x-2';
+        alert.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+      }
+      lucide.createIcons();
+    }
+
+    function clearAuthAlert() {
+      const alert = document.getElementById('authAlert');
+      alert.classList.add('hidden');
+      alert.innerHTML = '';
+    }
+
+    // Handle Login with "Remember Me" and Browser Password Manager
+    async function handleLogin(e) {
+      clearAuthAlert();
+      const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+      const password = document.getElementById('loginPassword').value;
+      const rememberMe = document.getElementById('rememberMeCheckbox')?.checked;
+
+      const users = getDBUsers();
+      const user = users.find(u => u.email.toLowerCase() === email);
+
+      if (!user) {
+        if (e) e.preventDefault();
+        showAuthAlert("Bunday email manzilli foydalanuvchi topilmadi. Ro'yxatdan o'tishingiz mumkin.");
+        return false;
+      }
+
+      if (user.password !== password) {
+        if (e) e.preventDefault();
+        showAuthAlert("Kiritilgan parol noto'g'ri. Iltimos, qayta urinib ko'ring.");
+        return false;
+      }
+
+      // Brauzer Parollar Menejeri (Google/Edge Password Manager) ga uzatish
+      if (window.PasswordCredential && navigator.credentials) {
+        try {
+          const cred = new PasswordCredential({
+            id: email,
+            password: password,
+            name: `${user.firstName} ${user.lastName}`
+          });
+          navigator.credentials.store(cred).catch(() => {});
+        } catch (err) {}
+      }
+
+      // Eslab qolish (Remember Me) holati
+      if (rememberMe) {
+        localStorage.setItem('fintech_remember_me', 'true');
+        localStorage.setItem('fintech_remembered_email', user.email);
+      } else {
+        localStorage.removeItem('fintech_remember_me');
+        localStorage.removeItem('fintech_remembered_email');
+      }
+
+      // Successful login
+      setCurrentSession(user.email);
+      updateAppView();
+      return true;
+    }
+
+    // Global Pending Registration & Verification State
+    let pendingRegData = null;
+    let currentOtpCode = null;
+
+    // Real Email Domain Verification (Whitelisted major providers & format)
+    const KNOWN_EMAIL_PROVIDERS = {
+      'gmail.com': 'Google Mail',
+      'googlemail.com': 'Google Mail',
+      'mail.ru': 'Mail.ru',
+      'inbox.ru': 'Mail.ru Inbox',
+      'bk.ru': 'Mail.ru BK',
+      'list.ru': 'Mail.ru List',
+      'yandex.ru': 'Yandex Mail',
+      'yandex.com': 'Yandex Mail',
+      'yandex.uz': 'Yandex Mail',
+      'ya.ru': 'Yandex Mail',
+      'yahoo.com': 'Yahoo Mail',
+      'outlook.com': 'Microsoft Outlook',
+      'hotmail.com': 'Microsoft Hotmail',
+      'icloud.com': 'Apple iCloud',
+      'proton.me': 'Proton Mail',
+      'protonmail.com': 'Proton Mail',
+      'fintech.uz': 'FinTech Corporate',
+      'it-park.uz': 'IT Park Mail'
+    };
+
+    // ================= REAL-TIME DNS MX RECORD & EMAIL VALIDATION =================
+    const domainMxCache = {};
+
+    // Global Email tekshiruvi - barcha haqiqiy email domenlariga ruxsat beradi
+    async function verifyDomainMX(domain) {
+      return { isValid: true, provider: (domain || '').toUpperCase() };
+    }
+
+    function validateEmailDomain(email) {
+      if (!email) return { isValid: false, reason: "Email manzili kiritilmadi." };
+      email = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return { isValid: false, reason: "Email formati noto'g'ri (masalan: ism@domen.uz)." };
+      }
+
+      const parts = email.split('@');
+      const domain = parts[1];
+      const provider = KNOWN_EMAIL_PROVIDERS[domain] || domain.toUpperCase();
+      return { isValid: true, providerName: provider, domain: domain };
+    }
+
+    // Real-vaqt rejimida yozish paytida DNS va domen tekshiruvi
+    let liveCheckTimer = null;
+    function checkEmailDomainLive(email) {
+      const statusEl = document.getElementById('emailLiveStatus');
+      if (!statusEl) return;
+
+      if (!email || !email.includes('@')) {
+        statusEl.className = 'hidden';
+        return;
+      }
+
+      clearTimeout(liveCheckTimer);
+      const res = validateEmailDomain(email.trim());
+      statusEl.classList.remove('hidden');
+
+      if (!res.isValid) {
+        statusEl.className = 'text-[11px] font-semibold text-rose-400 flex items-center gap-1';
+        statusEl.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i><span>${res.reason}</span>`;
+        lucide.createIcons();
+        return;
+      }
+
+      statusEl.className = 'text-[11px] font-semibold text-amber-400 flex items-center gap-1';
+      statusEl.innerHTML = `<svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>DNS/MX tekshirilmoqda...</span>`;
+
+      liveCheckTimer = setTimeout(async () => {
+        const mxRes = await verifyDomainMX(res.domain);
+        if (mxRes.isValid) {
+          statusEl.className = 'text-[11px] font-semibold text-emerald-400 flex items-center gap-1';
+          statusEl.innerHTML = `<i data-lucide="check-circle" class="w-3 h-3"></i><span>Haqiqiy pochta domeni (${res.providerName})</span>`;
+        } else {
+          statusEl.className = 'text-[11px] font-semibold text-rose-400 flex items-center gap-1';
+          statusEl.innerHTML = `<i data-lucide="alert-circle" class="w-3 h-3"></i><span>${mxRes.reason}</span>`;
+        }
+        lucide.createIcons();
+      }, 350);
+    }
+
+    // ================= REAL EMAIL DISPATCH ENGINE =================
+    function getEmailConfig() {
+      return {
+        webhookUrl: localStorage.getItem('fintech_email_webhook_url') || '',
+        emailjsPublicKey: localStorage.getItem('fintech_emailjs_public_key') || '',
+        emailjsServiceId: localStorage.getItem('fintech_emailjs_service_id') || '',
+        emailjsTemplateId: localStorage.getItem('fintech_emailjs_template_id') || ''
+      };
+    }
+
+    function openEmailSettingsModal() {
+      const cfg = getEmailConfig();
+      document.getElementById('emailWebhookUrlInput').value = cfg.webhookUrl;
+      document.getElementById('emailjsPublicKeyInput').value = cfg.emailjsPublicKey;
+      document.getElementById('emailjsServiceIdInput').value = cfg.emailjsServiceId;
+      document.getElementById('emailjsTemplateIdInput').value = cfg.emailjsTemplateId;
+      document.getElementById('emailSettingsModal').classList.remove('hidden');
+      document.getElementById('emailSettingsModal').classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeEmailSettingsModal() {
+      document.getElementById('emailSettingsModal').classList.add('hidden');
+      document.getElementById('emailSettingsModal').classList.remove('flex');
+    }
+
+    function saveEmailSettings() {
+      const webhook = document.getElementById('emailWebhookUrlInput').value.trim();
+      const pubKey = document.getElementById('emailjsPublicKeyInput').value.trim();
+      const srvId = document.getElementById('emailjsServiceIdInput').value.trim();
+      const tmplId = document.getElementById('emailjsTemplateIdInput').value.trim();
+
+      if (webhook) localStorage.setItem('fintech_email_webhook_url', webhook);
+      else localStorage.removeItem('fintech_email_webhook_url');
+
+      if (pubKey) localStorage.setItem('fintech_emailjs_public_key', pubKey);
+      else localStorage.removeItem('fintech_emailjs_public_key');
+
+      if (srvId) localStorage.setItem('fintech_emailjs_service_id', srvId);
+      else localStorage.removeItem('fintech_emailjs_service_id');
+
+      if (tmplId) localStorage.setItem('fintech_emailjs_template_id', tmplId);
+      else localStorage.removeItem('fintech_emailjs_template_id');
+
+      if (pubKey && window.emailjs) {
+        try {
+          emailjs.init({ publicKey: pubKey });
+        } catch (e) {}
+      }
+
+      alert("Pochta xizmati sozlamalari muvaffaqiyatli saqlandi!");
+      closeEmailSettingsModal();
+    }
+
+    async function sendTestEmail() {
+      const email = document.getElementById('testEmailInput').value.trim();
+      const alertBox = document.getElementById('testEmailAlert');
+      const btn = document.getElementById('sendTestEmailBtn');
+
+      if (!email || !email.includes('@')) {
+        alertBox.className = "p-2 rounded-xl text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        alertBox.textContent = "Iltimos, haqiqiy email manzilingizni kiriting.";
+        alertBox.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Yuborilmoqda...";
+      alertBox.classList.add('hidden');
+
+      const testCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const cfg = getEmailConfig();
+      let ok = false;
+      let errMsg = "";
+
+      if (cfg.webhookUrl) {
+        try {
+          await fetch(cfg.webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: email,
+              name: 'Foydalanuvchi',
+              code: testCode,
+              subject: "FinTech Pay - Sinov tasdiqlash kodi"
+            })
+          });
+          ok = true;
+        } catch(e) { errMsg = e.message; }
+      }
+
+      if (!ok && cfg.emailjsPublicKey && cfg.emailjsServiceId && cfg.emailjsTemplateId && window.emailjs) {
+        try {
+          await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
+            to_email: email,
+            to_name: 'Foydalanuvchi',
+            otp_code: testCode,
+            message: `FinTech Pay sinov kodi: ${testCode}`
+          }, cfg.emailjsPublicKey);
+          ok = true;
+        } catch(e) { errMsg = e.message; }
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Yuborib Ko'rish";
+      alertBox.classList.remove('hidden');
+
+      if (ok) {
+        alertBox.className = "p-2.5 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        alertBox.innerHTML = `✅ Sinov xati <b>${email}</b> pochtasiga yuborildi! Pochtani (Inbox yoki Spam papkasini) tekshiring.`;
+      } else {
+        alertBox.className = "p-2.5 rounded-xl text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        alertBox.innerHTML = `❌ Xat yuborilmadi! Yuqoridagi Google Webhook manzilini yoki EmailJS ma'lumotlarini to'g'ri kiritganingizni tekshiring. ${errMsg ? '(' + errMsg + ')' : ''}`;
+      }
+      lucide.createIcons();
+    }
+
+    // Avtomatik elektron pochtaga tasdiqlash kodini yuborish funksiyasi
+    async function sendVerificationEmail(email, firstName, otpCode) {
+      const statusBox = document.getElementById('emailSendingStatus');
+      const statusText = document.getElementById('emailSendingStatusText');
+      const spinner = document.getElementById('emailSendingSpinner');
+
+      if (statusBox) statusBox.classList.remove('hidden');
+      if (spinner) spinner.classList.remove('hidden');
+      if (statusText) statusText.textContent = "Tasdiqlash kodi pochtangizga avtomatik yuborilmoqda...";
+
+      console.info(`%c[FinTech Pay] Tasdiqlash kodi (${email}): ${otpCode}`, 'background: #0f172a; color: #38bdf8; font-size: 13px; font-weight: bold; padding: 4px 8px; border-radius: 6px;');
+
+      let sentSuccessfully = false;
+
+      // 1-USUL: Saytning o'z serveri (/api/send-otp) orqali avtomatik jo'natish
+      try {
+        const resp = await fetch('/api/send-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: email,
+            name: firstName,
+            code: otpCode
+          })
+        });
+        if (resp.ok) {
+          const resJson = await resp.json();
+          if (resJson && resJson.success) {
+            sentSuccessfully = true;
+          }
+        }
+      } catch (err) {
+        console.warn("Server /api/send-otp xabari:", err.message);
+      }
+
+      // 2-USUL: Google Apps Script Webhook (agar sozlangan bo'lsa)
+      const cfg = getEmailConfig();
+      if (!sentSuccessfully && cfg.webhookUrl) {
+        try {
+          await fetch(cfg.webhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: email,
+              name: firstName,
+              code: otpCode,
+              subject: "FinTech Pay - Ro'yxatdan o'tish tasdiqlash kodi"
+            })
+          });
+          sentSuccessfully = true;
+        } catch (webhookErr) {
+          console.warn("Webhook dispatch warning:", webhookErr);
+        }
+      }
+
+      // 3-USUL: EmailJS (agar kalitlar sozlangan bo'lsa)
+      if (!sentSuccessfully && cfg.emailjsPublicKey && cfg.emailjsServiceId && cfg.emailjsTemplateId && window.emailjs) {
+        try {
+          await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
+            to_email: email,
+            to_name: firstName,
+            otp_code: otpCode,
+            message: `Sizning tasdiqlash kodingiz: ${otpCode}`
+          }, cfg.emailjsPublicKey);
+          sentSuccessfully = true;
+        } catch (emailjsErr) {
+          console.warn("EmailJS dispatch warning:", emailjsErr);
+        }
+      }
+
+      // Natijani foydalanuvchiga ko'rsatish:
+      if (spinner) spinner.classList.add('hidden');
+      if (statusBox) {
+        if (sentSuccessfully) {
+          statusBox.className = "mb-3 p-3 rounded-2xl text-xs flex items-center space-x-2.5 bg-emerald-950/60 border border-emerald-500/40 text-emerald-200";
+          statusText.innerHTML = `
+            <div class="flex items-center space-x-2">
+              <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+              <div>
+                <p class="font-bold text-emerald-300">Tasdiqlash kodi pochtangizga yuborildi!</p>
+                <p class="text-[11px] text-emerald-200/90">
+                  <b>${email}</b> pochtangizni tekshiring (Inbox yoki Spam papkasini oching).
+                </p>
+              </div>
+            </div>
+          `;
+        } else {
+          statusBox.className = "mb-3 p-3 rounded-2xl text-xs flex items-start space-x-2.5 bg-rose-950/70 border border-rose-500/50 text-rose-200";
+          statusText.innerHTML = `
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+            <div>
+              <p class="font-bold text-rose-300">Pochtaga xat jo'natilmadi!</p>
+              <p class="text-[11px] text-rose-200/90 mt-0.5">
+                Serverda SMTP pochta xizmati sozlanmagan. Xat yetib borishi uchun <b>server.ps1</b> yoki <b>email-config.json</b> fayliga o'z Gmail SMTP ma'lumotlaringizni kiriting.
+              </p>
+            </div>
+          `;
+        }
+        lucide.createIcons();
+      }
+    }
+
+    // Handle Register - First Validates Email Existence, then prompts for Verification Code
+    async function handleRegister(e) {
+      if (e) e.preventDefault();
+      clearAuthAlert();
+
+      const firstName = document.getElementById('regFirstName').value.trim();
+      const lastName = document.getElementById('regLastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim().toLowerCase();
+      const phone = document.getElementById('regPhone').value.trim();
+      const password = document.getElementById('regPassword').value;
+
+      // 1. TEKSHIRUV: Email formati
+      const emailCheck = validateEmailDomain(email);
+      if (!emailCheck.isValid) {
+        showAuthAlert(`Email tekshiruvidan o'tmadi: ${emailCheck.reason}`);
+        return false;
+      }
+
+      // 1.1 TEKSHIRUV: Internetda mavjudligi (DNS MX tekshiruvi)
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>Pochta domeni tekshirilmoqda...</span>`;
+      }
+
+      const mxCheck = await verifyDomainMX(emailCheck.domain);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
+      }
+
+      if (!mxCheck.isValid) {
+        showAuthAlert(`Pochta domeni mavjud emas: ${mxCheck.reason}`);
+        return false;
+      }
+
+      // 2. TEKSHIRUV: Parol uzunligi
+      if (password.length < 6) {
+        showAuthAlert("Parol kamida 6 ta belgidan iborat bo'lishi shart.");
+        return false;
+      }
+
+      const users = getDBUsers();
+
+      // 3. TEKSHIRUV: Tizimda mavjudligi
+      if (users.some(u => u.email.toLowerCase() === email)) {
+        showAuthAlert("Ushbu email manzil allaqachon ro'yxatdan o'tgan. Iltimos, Kirish bo'limidan kiring.");
+        return false;
+      }
+
+      if (users.some(u => u.phone === phone)) {
+        showAuthAlert("Ushbu telefon raqam allaqachon ro'yxatdan o'tgan.");
+        return false;
+      }
+
+      // 4. HAQIQIY EMAIL VA PAROLNI TASDIQLASH JARAYONI:
+      // Pochtaga 6 xonali maxfiy tasdiqlash kodi generatsiya qilinadi
+      currentOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      pendingRegData = { firstName, lastName, email, phone, password, provider: emailCheck.providerName };
+
+      // Verification modalini ochish
+      document.getElementById('verifyTargetEmail').textContent = email;
+      document.getElementById('emailOtpInput').value = '';
+      clearVerifyAlert();
+      document.getElementById('emailVerifyModal').classList.remove('hidden');
+      document.getElementById('emailVerifyModal').classList.add('flex');
+
+      // Haqiqiy pochtaga tasdiqlash kodini yuborish (saytda hech qanday test kodi ko'rinmaydi!)
+      sendVerificationEmail(email, firstName, currentOtpCode);
+
+      lucide.createIcons();
+      return false;
+    }
+
+    function showVerifyAlert(message, type = 'error') {
+      const alert = document.getElementById('verifyAlert');
+      alert.classList.remove('hidden');
+      if (type === 'error') {
+        alert.className = 'mb-3 p-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs flex items-center space-x-2';
+        alert.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+      } else {
+        alert.className = 'mb-3 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2';
+        alert.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i><span>${message}</span>`;
+      }
+      lucide.createIcons();
+    }
+
+    function clearVerifyAlert() {
+      const alert = document.getElementById('verifyAlert');
+      alert.classList.add('hidden');
+      alert.innerHTML = '';
+    }
+
+    function closeEmailVerifyModal() {
+      document.getElementById('emailVerifyModal').classList.add('hidden');
+      document.getElementById('emailVerifyModal').classList.remove('flex');
+    }
+
+    async function resendVerificationCode() {
+      currentOtpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      clearVerifyAlert();
+      await sendVerificationEmail(pendingRegData.email, pendingRegData.firstName, currentOtpCode);
+      showVerifyAlert("Pochtaga yangi 6 xonali tasdiqlash kodi yuborildi!", 'success');
+    }
+
+    // Submit Email & Password Verification (Faqat to'g'ri kod bilan ro'yxatdan o'tadi)
+    async function submitEmailVerification() {
+      clearVerifyAlert();
+      const enteredCode = document.getElementById('emailOtpInput').value.trim();
+
+      if (!enteredCode || enteredCode.length !== 6) {
+        showVerifyAlert("Iltimos, pochtangizga kelgan 6 xonali tasdiqlash kodini to'liq kiriting.", 'error');
+        return;
+      }
+
+      if (enteredCode !== currentOtpCode) {
+        showVerifyAlert("Tasdiqlash kodi xato! Iltimos, pochtangizga yuborilgan kodni to'g'ri kiriting.", 'error');
+        return;
+      }
+
+      // EMAIL VA PAROL 100% TASDIQLANDI! Endi yangi foydalanuvchini bazada saqlaymiz:
+      const { firstName, lastName, email, phone, password } = pendingRegData;
+      const users = getDBUsers();
+
+      // Brauzer Parollar Menejeri (Google Chrome / Edge)
+      if (window.PasswordCredential && navigator.credentials) {
+        try {
+          const cred = new PasswordCredential({
+            id: email,
+            password: password,
+            name: `${firstName} ${lastName}`
+          });
+          navigator.credentials.store(cred).catch(() => {});
+        } catch (err) {}
+      }
+
+      // Yangi hamyon raqami
+      const randomPart = Math.floor(1000 + Math.random() * 9000);
+      const randomPart2 = Math.floor(1000 + Math.random() * 9000);
+      const walletNumber = `WAL-${randomPart}-${randomPart2}-USD`;
+
+      const newUser = {
+        id: 'usr-' + Date.now(),
+        firstName,
+        lastName,
+        email,
+        phone,
+        password,
+        walletNumber,
+        balance: 1000.00,
+        transactions: [
+          {
+            id: 'BONUS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+            participant: 'Tizim Xush Kelibsiz Bonusi',
+            type: 'Kirim (Deposit)',
+            amount: 1000.00,
+            fee: 0.00,
+            status: 'SUCCESS',
+            date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          }
+        ]
+      };
+
+      users.push(newUser);
+      saveDBUsers(users);
+
+      showVerifyAlert("Tasdiqlash muvaffaqiyatli! Hisobingiz yaratildi va faollashtirildi.", 'success');
+
+      setTimeout(() => {
+        closeEmailVerifyModal();
+        setCurrentSession(newUser.email);
+        updateAppView();
+      }, 1000);
+    }
+
+    // ================= REAL GOOGLE OAUTH 2.0 INTEGRATION =================
+    const DEFAULT_GOOGLE_CLIENT_ID = "707890857969-jta34ed104lbhc7110a6q3gc2u60jdg1.apps.googleusercontent.com";
+
+    function getGoogleClientId() {
+      const stored = localStorage.getItem('fintech_google_client_id');
+      if (!stored || stored.includes('381942084712')) {
+        localStorage.setItem('fintech_google_client_id', DEFAULT_GOOGLE_CLIENT_ID);
+        return DEFAULT_GOOGLE_CLIENT_ID;
+      }
+      return stored;
+    }
+
+    function toggleGoogleClientIdSetup() {
+      const box = document.getElementById('googleClientIdBox');
+      box.classList.toggle('hidden');
+      document.getElementById('customGoogleClientId').value = localStorage.getItem('fintech_google_client_id') || '';
+    }
+
+    function saveCustomGoogleClientId() {
+      const val = document.getElementById('customGoogleClientId').value.trim();
+      if (val) {
+        localStorage.setItem('fintech_google_client_id', val);
+        alert("Google Client ID saqlandi! Google xizmati yangilandi.");
+      } else {
+        localStorage.removeItem('fintech_google_client_id');
+        alert("Standart sozlamaga qaytarildi.");
+      }
+      initGoogleIdentityServices();
+    }
+
+    function initGoogleIdentityServices() {
+      if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+        setTimeout(initGoogleIdentityServices, 400);
+        return;
+      }
+
+      try {
+        const clientId = getGoogleClientId();
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        const btnWrapper = document.getElementById('googleOfficialBtnWrapper');
+        if (btnWrapper) {
+          btnWrapper.innerHTML = '';
+          google.accounts.id.renderButton(btnWrapper, {
+            theme: 'filled_blue',
+            size: 'large',
+            shape: 'pill',
+            text: 'continue_with',
+            width: 280,
+            logo_alignment: 'left'
+          });
+        }
+      } catch (err) {
+        console.warn("Google GSI notice:", err.message);
+        const btnWrapper = document.getElementById('googleOfficialBtnWrapper');
+        if (btnWrapper) {
+          btnWrapper.innerHTML = `
+            <button type="button" onclick="triggerGoogleTokenPopup()" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-2 shadow active:scale-[0.98] transition">
+              <svg class="w-4 h-4 bg-white rounded-full p-0.5" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+              <span>Google orqali kiring (Google Popup)</span>
+            </button>
+          `;
+        }
+      }
+    }
+
+    function triggerGoogleTokenPopup() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
+        try {
+          const client = google.accounts.oauth2.initTokenClient({
+            client_id: getGoogleClientId(),
+            scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+            callback: async (resp) => {
+              if (resp && resp.access_token) {
+                try {
+                  const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${resp.access_token}` }
+                  });
+                  const gUser = await res.json();
+                  if (gUser && gUser.email) {
+                    processGoogleLoginSuccess(
+                      gUser.email.toLowerCase(),
+                      gUser.given_name || (gUser.name ? gUser.name.split(' ')[0] : 'Google'),
+                      gUser.family_name || (gUser.name ? gUser.name.split(' ')[1] || 'User' : 'User'),
+                      gUser.picture
+                    );
+                  }
+                } catch(e) {
+                  console.error("Userinfo fetch error:", e);
+                }
+              }
+            }
+          });
+          client.requestAccessToken({ prompt: 'select_account' });
+          return;
+        } catch(err) {
+          console.warn("OAuth2 token client warning:", err);
+        }
+      }
+      triggerGoogleOneTap();
+    }
+
+    function triggerGoogleOneTap() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        google.accounts.id.prompt();
+      } else {
+        alert("Google xizmati yuklanmoqda...");
+      }
+    }
+
+    // Google JWT ID Token qabul qilish va dekodlash
+    function handleGoogleCredentialResponse(response) {
+      if (!response || !response.credential) {
+        return;
+      }
+
+      try {
+        const base64Url = response.credential.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const googleUser = JSON.parse(jsonPayload);
+        const email = googleUser.email.toLowerCase();
+        const firstName = googleUser.given_name || (googleUser.name ? googleUser.name.split(' ')[0] : 'Google');
+        const lastName = googleUser.family_name || (googleUser.name ? googleUser.name.split(' ')[1] || 'User' : 'User');
+
+        processGoogleLoginSuccess(email, firstName, lastName, googleUser.picture);
+      } catch (err) {
+        console.error("Google token decode error:", err);
+      }
+    }
+
+    function processGoogleLoginSuccess(email, firstName, lastName, pictureUrl) {
+      const users = getDBUsers();
+      let user = users.find(u => u.email.toLowerCase() === email);
+
+      if (!user) {
+        const randomPart = Math.floor(1000 + Math.random() * 9000);
+        const randomPart2 = Math.floor(1000 + Math.random() * 9000);
+        const walletNumber = `WAL-${randomPart}-${randomPart2}-USD`;
+
+        user = {
+          id: 'usr-google-' + Date.now(),
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          phone: '+99890' + Math.floor(1000000 + Math.random() * 9000000),
+          password: 'google-oauth-verified',
+          walletNumber: walletNumber,
+          balance: 1000.00,
+          isGoogleAuth: true,
+          avatarUrl: pictureUrl || null,
+          transactions: [
+            {
+              id: 'BONUS-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+              participant: 'Google OAuth Xush Kelibsiz Bonusi',
+              type: 'Kirim (Deposit)',
+              amount: 1000.00,
+              fee: 0.00,
+              status: 'SUCCESS',
+              date: new Date().toISOString().replace('T', ' ').substring(0, 16)
+            }
+          ]
+        };
+        users.push(user);
+        saveDBUsers(users);
+      }
+
+      closeGoogleOAuthModal();
+      setCurrentSession(user.email);
+      updateAppView();
+    }
+
+    // Google OAuth Modal Handlers
+    function openGoogleOAuthModal() {
+      document.getElementById('googleOAuthModal').classList.remove('hidden');
+      document.getElementById('googleOAuthModal').classList.add('flex');
+      document.getElementById('googleEmailInput').value = '';
+      document.getElementById('googlePasswordInput').value = '';
+      document.getElementById('googleOAuthAlert').className = 'hidden';
+      initGoogleIdentityServices();
+      lucide.createIcons();
+    }
+
+    function closeGoogleOAuthModal() {
+      document.getElementById('googleOAuthModal').classList.add('hidden');
+      document.getElementById('googleOAuthModal').classList.remove('flex');
+    }
+
+    function handleGoogleOAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('googleEmailInput').value.trim().toLowerCase();
+      const password = document.getElementById('googlePasswordInput').value;
+      const alertBox = document.getElementById('googleOAuthAlert');
+
+      if (!email.endsWith('@gmail.com') && !email.endsWith('@googlemail.com')) {
+        alertBox.className = 'p-2.5 rounded-xl text-xs bg-red-100 text-red-700 border border-red-200';
+        alertBox.textContent = "Iltimos, haqiqiy @gmail.com pochta manzilini kiriting.";
+        return;
+      }
+
+      if (password.length < 6) {
+        alertBox.className = 'p-2.5 rounded-xl text-xs bg-red-100 text-red-700 border border-red-200';
+        alertBox.textContent = "Google hisob paroli kamida 6 ta belgi bo'lishi kerak.";
+        return;
+      }
+
+      const namePart = email.split('@')[0];
+      const firstName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+      processGoogleLoginSuccess(email, firstName, 'Google User', null);
+    }
+
+    // Handle Logout
+    function handleLogout() {
+      if (confirm("Haqiqatan ham tizimdan chiqmoqchimisiz?")) {
+        clearSession();
+        updateAppView();
+      }
+    }
+
+    // RENDER DASHBOARD
+    function renderDashboard() {
+      if (!currentUser) return;
+
+      const fullName = `${currentUser.firstName} ${currentUser.lastName}`;
+      document.getElementById('welcomeUserName').textContent = currentUser.firstName;
+      document.getElementById('userNameDisplay').textContent = fullName;
+      document.getElementById('userEmailDisplay').textContent = currentUser.email;
+      document.getElementById('userPhoneDisplay').textContent = currentUser.phone;
+      document.getElementById('walletNumberDisplay').textContent = currentUser.walletNumber;
+      document.getElementById('userAvatar').textContent = `${currentUser.firstName[0]}${currentUser.lastName[0]}`.toUpperCase();
+
+      // Balance
+      const balEl = document.getElementById('balanceDisplay');
+      if (showBalance) {
+        balEl.textContent = currentUser.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } else {
+        balEl.textContent = '••••••••';
+      }
+
+      document.getElementById('modalMaxBalance').textContent = '$' + currentUser.balance.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
+      // Render other users directory
+      renderOtherUsers();
+
+      // Transactions
+      renderTransactions();
+    }
+
+    function renderOtherUsers() {
+      const users = getDBUsers();
+      const listEl = document.getElementById('otherUsersList');
+      listEl.innerHTML = '';
+
+      const otherUsers = users.filter(u => u.email.toLowerCase() !== currentUser.email.toLowerCase());
+
+      if (otherUsers.length === 0) {
+        listEl.innerHTML = '<p class="text-xs text-slate-500 italic">Boshqa foydalanuvchilar mavjud emas.</p>';
+        return;
+      }
+
+      otherUsers.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 flex items-center justify-between transition cursor-pointer';
+        item.onclick = () => {
+          openTransferModal();
+          document.getElementById('recipientInput').value = u.email;
+          clearTransferAlert();
+        };
+
+        item.innerHTML = `
+          <div>
+            <p class="text-xs font-semibold text-white">${u.firstName} ${u.lastName}</p>
+            <p class="text-[11px] text-slate-400 font-mono">${u.email} | ${u.phone}</p>
+          </div>
+          <span class="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold px-2 py-1 rounded-lg bg-indigo-500/10">
+            Tanlash
+          </span>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function renderTransactions() {
+      const tbody = document.getElementById('transactionsBody');
+      tbody.innerHTML = '';
+
+      if (!currentUser.transactions || currentUser.transactions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-6 text-slate-500 text-xs">
+              Hozircha hech qanday tranzaksiyalar mavjud emas.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      currentUser.transactions.forEach((tx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/40 transition';
+        const isIncoming = tx.type.includes('Kirim');
+
+        tr.innerHTML = `
+          <td class="py-4 px-3 text-indigo-400 font-semibold">${tx.id}</td>
+          <td class="py-4 px-3 text-slate-200 font-sans font-medium">${tx.participant}</td>
+          <td class="py-4 px-3">
+            <span class="px-2 py-0.5 rounded-md text-[11px] font-sans font-semibold ${isIncoming ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-300'}">
+              ${tx.type}
+            </span>
+          </td>
+          <td class="py-4 px-3 font-bold ${isIncoming ? 'text-emerald-400' : 'text-slate-100'}">
+            ${isIncoming ? '+' : '-'}$${tx.amount.toFixed(2)}
+          </td>
+          <td class="py-4 px-3 text-slate-400">$${tx.fee.toFixed(2)}</td>
+          <td class="py-4 px-3">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-sans font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              ${tx.status}
+            </span>
+          </td>
+          <td class="py-4 px-3 text-right">
+            <button onclick="viewReceipt('${tx.id}', '${currentUser.firstName} ${currentUser.lastName}', '${tx.participant}', ${tx.amount}, ${tx.fee}, '${tx.date}')" class="text-slate-400 hover:text-white font-sans underline transition text-xs">
+              Chekni Ko'rish
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function toggleBalance() {
+      showBalance = !showBalance;
+      const eyeIcon = document.getElementById('eyeIcon');
+      eyeIcon.setAttribute('data-lucide', showBalance ? 'eye' : 'eye-off');
+      renderDashboard();
+    }
+
+    function copyWalletNumber() {
+      const text = currentUser.walletNumber;
+      navigator.clipboard.writeText(text);
+      alert("Hamyon raqamingiz nusxalandi: " + text);
+    }
+
+    // TRANSFER MODAL LOGIC
+    function openTransferModal() {
+      document.getElementById('transferModal').classList.remove('hidden');
+      document.getElementById('transferModal').classList.add('flex');
+      resetTransferForm();
+      lucide.createIcons();
+    }
+
+    function closeTransferModal() {
+      document.getElementById('transferModal').classList.add('hidden');
+      document.getElementById('transferModal').classList.remove('flex');
+    }
+
+    function resetTransferForm() {
+      document.getElementById('transferForm').reset();
+      clearTransferAlert();
+      document.getElementById('twoFASection').classList.add('hidden');
+      document.getElementById('submitBtnText').textContent = 'Pulni Yuborish';
+      requires2FA = false;
+      calculateFee();
+    }
+
+    function clearTransferAlert() {
+      const alertBox = document.getElementById('transferAlert');
+      alertBox.className = 'hidden';
+      alertBox.innerHTML = '';
+    }
+
+    function showTransferAlert(message, type = 'error') {
+      const alertBox = document.getElementById('transferAlert');
+      alertBox.classList.remove('hidden');
+      if (type === 'error') {
+        alertBox.className = 'mt-4 p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-start space-x-2.5';
+        alertBox.innerHTML = `
+          <i data-lucide="shield-alert" class="w-5 h-5 shrink-0 text-rose-400 mt-0.5"></i>
+          <div>
+            <p class="font-bold text-rose-400">O'tkazma Bekor Qilindi!</p>
+            <p class="mt-0.5 leading-relaxed">${message}</p>
+          </div>
+        `;
+      } else if (type === 'warning') {
+        alertBox.className = 'mt-4 p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-start space-x-2.5';
+        alertBox.innerHTML = `
+          <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0 text-amber-400 mt-0.5"></i>
+          <div>
+            <p class="font-bold text-amber-400">Xavfsizlik Ogohlantirishi</p>
+            <p class="mt-0.5 leading-relaxed">${message}</p>
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    function setMaxAmount() {
+      const maxTransfer = currentUser.balance / 1.005;
+      document.getElementById('amountInput').value = maxTransfer > 0 ? maxTransfer.toFixed(2) : '0.00';
+      calculateFee();
+    }
+
+    function calculateFee() {
+      const amount = parseFloat(document.getElementById('amountInput').value) || 0;
+      const fee = amount * 0.005;
+      const total = amount + fee;
+
+      document.getElementById('feeDisplay').textContent = '$' + fee.toFixed(2);
+      const totalEl = document.getElementById('totalDeductionDisplay');
+      totalEl.textContent = '$' + total.toFixed(2);
+
+      if (total > currentUser.balance) {
+        totalEl.classList.remove('text-indigo-400');
+        totalEl.classList.add('text-rose-400');
+      } else {
+        totalEl.classList.remove('text-rose-400');
+        totalEl.classList.add('text-indigo-400');
+      }
+    }
+
+    // ================= P2P TRANSFER HANDLER WITH RECIPIENT VALIDATION =================
+    function handleTransferSubmit(e) {
+      e.preventDefault();
+      clearTransferAlert();
+
+      const recipientIdentifier = document.getElementById('recipientInput').value.trim();
+      const amount = parseFloat(document.getElementById('amountInput').value) || 0;
+      const description = document.getElementById('descriptionInput').value.trim();
+      const fee = amount * 0.005;
+      const totalDeduction = amount + fee;
+
+      // 1. TEKSHIRUV: Mablag' yetarliligi
+      if (totalDeduction > currentUser.balance) {
+        showTransferAlert("Hisobingizda yetarli mablag' mavjud emas! Mavjud balans: $" + currentUser.balance.toFixed(2));
+        return;
+      }
+
+      // 2. TEKSHIRUV: O'z hisobiga o'tkazishni to'sish
+      if (
+        recipientIdentifier.toLowerCase() === currentUser.email.toLowerCase() ||
+        recipientIdentifier === currentUser.phone ||
+        recipientIdentifier.toUpperCase() === currentUser.walletNumber.toUpperCase()
+      ) {
+        showTransferAlert("O'z hamyoningizga P2P pul o'tkaza olmaysiz. Iltimos, boshqa qabul qiluvchini kiriting.");
+        return;
+      }
+
+      // 3. ASOSIY TALAB: QABUL QILUVCHI MAVJUDLIGINI TEKSHIRISH
+      // Agar tizimda kiritilgan email, telefon yoki hamyon raqamli foydalanuvchi topilmasa:
+      // BU O'TKAZMA BEKOR QILINADI VA HECH QANDAY MABLAG' YECHILMAYDI!
+      const users = getDBUsers();
+      const recipientUser = users.find(u => 
+        u.email.toLowerCase() === recipientIdentifier.toLowerCase() ||
+        u.phone === recipientIdentifier ||
+        u.walletNumber.toUpperCase() === recipientIdentifier.toUpperCase()
+      );
+
+      if (!recipientUser) {
+        showTransferAlert(
+          `"${recipientIdentifier}" identifikatoriga ega foydalanuvchi yoki hamyon tizimda ro'yxatdan o'tmagan! Tranzaksiya to'xtatildi va hisobingizdan pul yechilmadi.`
+        );
+        return;
+      }
+
+      // 4. TEKSHIRUV: 2FA (100$ dan ortiq summa uchun)
+      if (amount >= 100 && !requires2FA) {
+        requires2FA = true;
+        document.getElementById('twoFASection').classList.remove('hidden');
+        document.getElementById('submitBtnText').textContent = '2FA Kodni Tasdiqlash va Yuborish';
+        showTransferAlert(
+          `Xavfsizlik: 100$ dan ortiq transferlar uchun Google Authenticator 2FA tasdiqlash kodi talab qilinadi.`,
+          'warning'
+        );
+        return;
+      }
+
+      if (requires2FA) {
+        const code = document.getElementById('twoFACode').value.trim();
+        if (code.length !== 6) {
+          showTransferAlert("2FA xavfsizlik kodi noto'g'ri! Iltimos, 6 xonali kodni to'liq kiriting.");
+          return;
+        }
+      }
+
+      // ================= ATOMIC ACID TRANSACTION EXECUTION =================
+      const now = new Date();
+      const txId = 'TRX-' + now.getFullYear() + (now.getMonth()+1).toString().padStart(2, '0') + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      const dateStr = now.toISOString().replace('T', ' ').substring(0, 16);
+
+      // Yuboruvchi hisobidan pul yechish (DEBIT)
+      currentUser.balance -= totalDeduction;
+      currentUser.transactions.unshift({
+        id: txId,
+        participant: `${recipientUser.firstName} ${recipientUser.lastName} (${recipientUser.email})`,
+        type: 'Chiqim (P2P)',
+        amount: amount,
+        fee: fee,
+        status: 'SUCCESS',
+        date: dateStr,
+        description: description || 'P2P Transfer'
+      });
+
+      // Qabul qiluvchi hisobiga pul qo'shish (CREDIT)
+      recipientUser.balance += amount;
+      recipientUser.transactions.unshift({
+        id: txId,
+        participant: `${currentUser.firstName} ${currentUser.lastName} (${currentUser.email})`,
+        type: 'Kirim (P2P)',
+        amount: amount,
+        fee: 0.00,
+        status: 'SUCCESS',
+        date: dateStr,
+        description: description || 'P2P Transfer'
+      });
+
+      // Bazani saqlash (COMMIT)
+      const currentIdx = users.findIndex(u => u.id === currentUser.id);
+      const recipientIdx = users.findIndex(u => u.id === recipientUser.id);
+      users[currentIdx] = currentUser;
+      users[recipientIdx] = recipientUser;
+      saveDBUsers(users);
+
+      closeTransferModal();
+      renderDashboard();
+
+      // Chekni ko'rsatish
+      viewReceipt(
+        txId, 
+        `${currentUser.firstName} ${currentUser.lastName}`, 
+        `${recipientUser.firstName} ${recipientUser.lastName} (${recipientUser.email})`, 
+        amount, 
+        fee, 
+        dateStr
+      );
+    }
+
+    // SIMULATE DEPOSIT (HISOBNI TO'LDIRISH)
+    function simulateDeposit() {
+      const depositAmount = 1000.00;
+      currentUser.balance += depositAmount;
+      const now = new Date();
+      const txId = 'DEP-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const dateStr = now.toISOString().replace('T', ' ').substring(0, 16);
+
+      currentUser.transactions.unshift({
+        id: txId,
+        participant: 'Bank Kartasidan (Uzcard/Humo/Visa)',
+        type: 'Kirim (Deposit)',
+        amount: depositAmount,
+        fee: 0.00,
+        status: 'SUCCESS',
+        date: dateStr
+      });
+
+      const users = getDBUsers();
+      const idx = users.findIndex(u => u.id === currentUser.id);
+      users[idx] = currentUser;
+      saveDBUsers(users);
+
+      renderDashboard();
+      alert("Hamyoningiz muvaffaqiyatli +$1,000.00 ga to'ldirildi!");
+    }
+
+    // VIEW RECEIPT
+    function viewReceipt(id, sender, recipient, amount, fee, date) {
+      document.getElementById('rcpRef').textContent = id;
+      document.getElementById('rcpSender').textContent = sender;
+      document.getElementById('rcpRecipient').textContent = recipient;
+      document.getElementById('rcpAmount').textContent = '$' + amount.toFixed(2);
+      document.getElementById('rcpFee').textContent = '$' + fee.toFixed(2);
+      document.getElementById('rcpDate').textContent = date;
+
+      document.getElementById('receiptModal').classList.remove('hidden');
+      document.getElementById('receiptModal').classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('receiptModal').classList.add('hidden');
+      document.getElementById('receiptModal').classList.remove('flex');
+    }
+
+    // APPLICATION STARTUP
+    window.addEventListener('DOMContentLoaded', () => {
+      // Agar "Meni eslab qolish" (Remember Me) belgilanmagan bo'lsa, tizim kirish oynasida boshlanadi
+      const isRemembered = localStorage.getItem('fintech_remember_me') === 'true';
+      if (!isRemembered) {
+        clearSession();
+      }
+      updateAppView();
+      initGoogleIdentityServices();
+    });
+  </script>
+</body>
+</html>

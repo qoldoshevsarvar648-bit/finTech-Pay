@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // CORS sozlamalari
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');

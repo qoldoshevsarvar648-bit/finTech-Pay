@@ -49,6 +49,19 @@
 
     <div class="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative z-10">
       
+      <!-- Top Actions (Pochta sozlamalari) -->
+      <div class="absolute top-4 right-4 z-20">
+        <button
+          type="button"
+          onclick="openEmailSettingsModal()"
+          title="Pochta xizmatini sozlash (Google Webhook / Vercel)"
+          class="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-indigo-400 border border-slate-700/60 transition flex items-center gap-1.5 text-[11px]"
+        >
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Pochta sozlamalari</span>
+        </button>
+      </div>
+
       <!-- Brand Logo -->
       <div class="text-center mb-6">
         <div class="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 mb-3">
@@ -845,17 +858,37 @@
       </div>
 
       <div class="my-4 space-y-4 text-xs">
-        <!-- Option 1: Google Apps Script Webhook (Recommended) -->
+        <!-- Option 1: Vercel / External Serverless Backend URL -->
         <div class="p-4 bg-slate-800/60 border border-indigo-500/30 rounded-2xl space-y-2">
           <div class="flex items-center justify-between">
             <span class="font-bold text-white flex items-center gap-1.5">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Google Apps Script / Webhook (Gmail orqali bepul jo'natish)
+              <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+              1-USUL: Vercel yoki Tashqi Backend Server URL
             </span>
-            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">Tavsiya etiladi</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold">Tavsiya etiladi ⭐</span>
           </div>
           <p class="text-slate-400 text-[11px] leading-relaxed">
-            Google hisobingiz (Gmail) orqali to'g'ridan-to'g'ri foydalanuvchilar pochtasiga xat yetkazish uchun Google Apps Script Web App URL manzilini kiriting:
+            Agar loyihangizni Vercel orqali deploy qilgan bo'lsangiz, Vercel domenini kiriting (bo'sh qoldirilsa saytning o'z serveri ishlatiladi):
+          </p>
+          <input
+            id="emailBackendUrlInput"
+            type="url"
+            placeholder="https://fintech-pay-xxx.vercel.app"
+            class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-mono text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        <!-- Option 2: Google Apps Script Webhook (For GitHub Pages) -->
+        <div class="p-4 bg-slate-800/60 border border-emerald-500/30 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              2-USUL: Google Apps Script Webhook (GitHub Pages uchun 100% bepul)
+            </span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">Gmail orqali</span>
+          </div>
+          <p class="text-slate-400 text-[11px] leading-relaxed">
+            GitHub Pages'da turgan saytdan to'g'ridan-to'g'ri Gmail hisobingiz orqali xat jo'natish uchun Google Web App URL manzilini kiriting:
           </p>
           <input
             id="emailWebhookUrlInput"
@@ -869,34 +902,15 @@
             </summary>
             <div class="mt-2 p-3 bg-slate-900/90 rounded-xl space-y-2 text-slate-300 border border-slate-700/50">
               <p>1. <a href="https://script.google.com" target="_blank" class="text-indigo-400 underline">script.google.com</a> ga kiring va "New project" bosing.</p>
-              <p>2. Quyidagi kodni nusxalab, tahrirlovchiga joylang:</p>
-              <pre class="bg-black/60 p-2.5 rounded-lg font-mono text-[10px] text-emerald-300 overflow-x-auto select-all">function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    MailApp.sendEmail({
-      to: data.to,
-      subject: data.subject || "FinTech Pay - Tasdiqlash Kodi",
-      htmlBody: "&lt;div style='font-family:sans-serif;padding:24px;background:#0f172a;color:#fff;border-radius:16px;max-width:480px;'&gt;"
-              + "&lt;h2 style='color:#6366f1;margin-top:0'&gt;FinTech Pay&lt;/h2&gt;"
-              + "&lt;p&gt;Assalomu alaykum " + (data.name || '') + "!&lt;/p&gt;"
-              + "&lt;p&gt;Saytda ro'yxatdan o'tish uchun tasdiqlash kodingiz:&lt;/p&gt;"
-              + "&lt;div style='font-size:32px;font-weight:bold;letter-spacing:6px;background:#1e293b;padding:16px;text-align:center;border-radius:12px;color:#38bdf8;margin:16px 0;'&gt;"
-              + data.code + "&lt;/div&gt;"
-              + "&lt;p style='color:#94a3b8;font-size:12px'&gt;Ushbu kodni hech kimga bermang. Kod 10 daqiqa davomida amal qiladi.&lt;/p&gt;&lt;/div&gt;"
-    });
-    return ContentService.createTextOutput(JSON.stringify({status: 'ok'})).setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({status: 'error', error: err.message})).setMimeType(ContentService.MimeType.JSON);
-  }
-}</pre>
-              <p>3. "Deploy" -> "New deployment" -> Turi: "Web app" -> "Who has access": "Anyone" -> "Deploy" bosing va berilgan URL manzilni yuqoriga qo'ying.</p>
+              <p>2. Loyihadagi <b>google-apps-script.js</b> fayli ichidagi kodni nusxalab, tahrirlovchiga joylang.</p>
+              <p>3. "Deploy" -> "New deployment" -> Turi: "Web app" -> "Execute as: Me" -> "Who has access: Anyone" -> "Deploy" bosing va berilgan URL manzilni yuqoriga qo'ying.</p>
             </div>
           </details>
         </div>
 
-        <!-- Option 2: EmailJS -->
+        <!-- Option 3: EmailJS -->
         <div class="p-4 bg-slate-800/60 border border-slate-700/60 rounded-2xl space-y-2">
-          <span class="font-bold text-white">Yoki EmailJS Xizmati (Public Key, Service ID, Template ID):</span>
+          <span class="font-bold text-white">3-USUL: EmailJS Xizmati (Ixtiyoriy):</span>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <label class="block text-[10px] text-slate-400 mb-1">Public Key:</label>
@@ -910,7 +924,10 @@
               <label class="block text-[10px] text-slate-400 mb-1">Template ID:</label>
               <input id="emailjsTemplateIdInput" type="text" placeholder="template_xxx" class="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs font-mono text-white" />
             </div>
-        <!-- Option 3: Test Sending -->
+          </div>
+        </div>
+
+        <!-- Option 4: Test Sending -->
         <div class="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl space-y-2">
           <span class="font-bold text-white flex items-center gap-1.5">
             <i data-lucide="send" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -1213,6 +1230,7 @@
     // ================= REAL EMAIL DISPATCH ENGINE =================
     function getEmailConfig() {
       return {
+        backendUrl: localStorage.getItem('fintech_backend_url') || '',
         webhookUrl: localStorage.getItem('fintech_email_webhook_url') || '',
         emailjsPublicKey: localStorage.getItem('fintech_emailjs_public_key') || '',
         emailjsServiceId: localStorage.getItem('fintech_emailjs_service_id') || '',
@@ -1222,6 +1240,8 @@
 
     function openEmailSettingsModal() {
       const cfg = getEmailConfig();
+      const backendInput = document.getElementById('emailBackendUrlInput');
+      if (backendInput) backendInput.value = cfg.backendUrl;
       document.getElementById('emailWebhookUrlInput').value = cfg.webhookUrl;
       document.getElementById('emailjsPublicKeyInput').value = cfg.emailjsPublicKey;
       document.getElementById('emailjsServiceIdInput').value = cfg.emailjsServiceId;
@@ -1237,10 +1257,15 @@
     }
 
     function saveEmailSettings() {
+      const backendInput = document.getElementById('emailBackendUrlInput');
+      const backend = backendInput ? backendInput.value.trim() : '';
       const webhook = document.getElementById('emailWebhookUrlInput').value.trim();
       const pubKey = document.getElementById('emailjsPublicKeyInput').value.trim();
       const srvId = document.getElementById('emailjsServiceIdInput').value.trim();
       const tmplId = document.getElementById('emailjsTemplateIdInput').value.trim();
+
+      if (backend) localStorage.setItem('fintech_backend_url', backend);
+      else localStorage.removeItem('fintech_backend_url');
 
       if (webhook) localStorage.setItem('fintech_email_webhook_url', webhook);
       else localStorage.removeItem('fintech_email_webhook_url');
@@ -1285,7 +1310,24 @@
       let ok = false;
       let errMsg = "";
 
-      if (cfg.webhookUrl) {
+      // Test Backend URL
+      if (cfg.backendUrl) {
+        try {
+          const testApi = cfg.backendUrl.replace(/\/+$/, '') + '/api/send-otp';
+          const r = await fetch(testApi, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: email, name: 'Foydalanuvchi', code: testCode })
+          });
+          if (r.ok) {
+            const j = await r.json();
+            if (j && j.success) ok = true;
+          }
+        } catch(e) { errMsg = e.message; }
+      }
+
+      // Test Webhook
+      if (!ok && cfg.webhookUrl) {
         try {
           await fetch(cfg.webhookUrl, {
             method: 'POST',
@@ -1302,6 +1344,7 @@
         } catch(e) { errMsg = e.message; }
       }
 
+      // Test EmailJS
       if (!ok && cfg.emailjsPublicKey && cfg.emailjsServiceId && cfg.emailjsTemplateId && window.emailjs) {
         try {
           await emailjs.send(cfg.emailjsServiceId, cfg.emailjsTemplateId, {
@@ -1342,9 +1385,11 @@
 
       let sentSuccessfully = false;
 
-      // 1-USUL: Saytning o'z serveri (/api/send-otp) orqali avtomatik jo'natish
+      // 1-USUL: Saytning o'z serveri yoki Vercel backend (/api/send-otp) orqali avtomatik jo'natish
+      const cfg = getEmailConfig();
+      const apiUrl = (cfg.backendUrl ? cfg.backendUrl.replace(/\/+$/, '') : '') + '/api/send-otp';
       try {
-        const resp = await fetch('/api/send-otp', {
+        const resp = await fetch(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1364,7 +1409,6 @@
       }
 
       // 2-USUL: Google Apps Script Webhook (agar sozlangan bo'lsa)
-      const cfg = getEmailConfig();
       if (!sentSuccessfully && cfg.webhookUrl) {
         try {
           await fetch(cfg.webhookUrl, {
@@ -1375,7 +1419,7 @@
               to: email,
               name: firstName,
               code: otpCode,
-              subject: "FinTech Pay - Ro'yxatdan o'tish tasdiqlash kodi"
+              subject: "FinTech Pay - Tasdiqlash kodi: " + otpCode
             })
           });
           sentSuccessfully = true;
@@ -1418,12 +1462,18 @@
         } else {
           statusBox.className = "mb-3 p-3 rounded-2xl text-xs flex items-start space-x-2.5 bg-rose-950/70 border border-rose-500/50 text-rose-200";
           statusText.innerHTML = `
-            <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
-            <div>
-              <p class="font-bold text-rose-300">Pochtaga xat jo'natilmadi!</p>
-              <p class="text-[11px] text-rose-200/90 mt-0.5">
-                Serverda SMTP pochta xizmati sozlanmagan. Xat yetib borishi uchun <b>server.ps1</b> yoki <b>email-config.json</b> fayliga o'z Gmail SMTP ma'lumotlaringizni kiriting.
-              </p>
+            <div class="flex items-start space-x-2.5 w-full">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+              <div class="space-y-1.5 flex-1">
+                <p class="font-bold text-rose-300">Pochtaga xat jo'natilmadi!</p>
+                <p class="text-[11px] text-rose-200/90 leading-relaxed">
+                  GitHub Pages faqat statik veb-sayt bo'lgani sababli, unda pochta jo'natuvchi backend server bo'lmaydi. Saytni <b>Vercel</b> orqali deploy qiling yoki bepul <b>Google Webhook</b>ni ulang.
+                </p>
+                <button type="button" onclick="openEmailSettingsModal()" class="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600/40 hover:bg-rose-600/60 border border-rose-500/50 rounded-xl text-[11px] font-semibold text-white transition mt-1">
+                  <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                  <span>Pochta sozlamalarini ochish (Google Webhook)</span>
+                </button>
+              </div>
             </div>
           `;
         }

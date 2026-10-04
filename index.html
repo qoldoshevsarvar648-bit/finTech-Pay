@@ -980,18 +980,14 @@
       localStorage.setItem('fintech_users', JSON.stringify(users));
     }
 
-    // Barcha akkountlarni butunlay tozalash funksiyasi
+    // Barcha akkountlarni butunlay tozalash funksiyasi (faqat foydalanuvchi tugmani bosganda ishlaydi)
     function clearAllAccounts() {
-      localStorage.clear();
       localStorage.setItem('fintech_users', JSON.stringify([]));
       clearSession();
+      localStorage.removeItem('fintech_remember_me');
+      localStorage.removeItem('fintech_remembered_email');
       updateAppView();
     }
-
-    // Tizimdagi har qanday qolgan akkountlarni darhol butunlay o'chirish:
-    localStorage.setItem('fintech_users', JSON.stringify([]));
-    localStorage.removeItem('fintech_session_email');
-    localStorage.removeItem('fintech_remember_me');
 
     function getCurrentUser() {
       const sessionEmail = localStorage.getItem('fintech_session_email');
@@ -2250,11 +2246,6 @@
 
     // APPLICATION STARTUP
     window.addEventListener('DOMContentLoaded', () => {
-      // Agar "Meni eslab qolish" (Remember Me) belgilanmagan bo'lsa, tizim kirish oynasida boshlanadi
-      const isRemembered = localStorage.getItem('fintech_remember_me') === 'true';
-      if (!isRemembered) {
-        clearSession();
-      }
       updateAppView();
       initGoogleIdentityServices();
     });
